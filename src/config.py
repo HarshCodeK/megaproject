@@ -25,6 +25,18 @@ LLM_PROBE_INTERVAL_S = 60
 # Agent runtime
 MAX_AGENT_STEPS = 8  # planner loops capped so agents can't run away
 
+# Operator (real repo work: read/grep/run/edit behind a sandbox)
+# Workspace the operator may touch. Defaults to this repo; override per deploy.
+WORKSPACE = os.environ.get("MP_WORKSPACE", ROOT)
+# Writes are OFF unless explicitly enabled. The API additionally requires
+# MP_ALLOW_OPERATOR_WRITE=1 before it will even accept allow_write=true.
+ALLOW_WRITE = os.environ.get("MP_ALLOW_WRITE", "0") == "1"
+ALLOW_OPERATOR_WRITE_VIA_API = os.environ.get("MP_ALLOW_OPERATOR_WRITE", "0") == "1"
+MAX_OPERATOR_ROUNDS = int(os.environ.get("MP_MAX_ROUNDS", "10"))
+CMD_TIMEOUT_S = int(os.environ.get("MP_CMD_TIMEOUT_S", "30"))
+MAX_READ_BYTES = 200_000
+MAX_TOOL_OUTPUT_CHARS = 20_000
+
 # RAG
 CHUNK_WORDS = 100
 TOP_K = 3
