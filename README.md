@@ -47,9 +47,7 @@ if resolved != root and not resolved.startswith(root + os.sep):
 rejected rather than followed. Absolute paths and `~` are refused outright.
 
 **State the limit yourself:** this is a *path* sandbox, not a *privilege* one.
-It stops the agent reading outside the workspace. It does not stop a subprocess
-spawned by `run_cmd` from doing so — that needs a container, which is what a
-production deployment would use. Saying this before you are asked is the
+File-tool paths are contained to the workspace, and the shell surface exposes only fixed read-only commands. This is still an application-level control, not OS-level process isolation; a production deployment would add container or OS sandboxing. Saying this before you are asked is the
 difference between a security control and a security claim.
 
 Command execution is an allowlist of fixed read-only invocations: `git status`, `git diff`, `git log`, `git show`, `ls`, and `dir`. Command arguments are disabled, so the shell tool cannot be turned into a general-purpose process launcher. Python execution, pytest execution, branch mutation, and `git push` are refused.
