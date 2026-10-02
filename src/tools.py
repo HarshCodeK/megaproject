@@ -23,8 +23,8 @@ MAX_HITS = 50
 
 # Commands the agent may run. An allowlist, not a denylist: anything not named
 # here does not run. git is further restricted to read-only subcommands.
-ALLOWED_COMMANDS = {"python", "python3", "pytest", "git", "ls", "dir"}
-ALLOWED_GIT = {"status", "diff", "log", "show", "branch"}
+ALLOWED_COMMANDS = {"git", "ls", "dir"}
+ALLOWED_GIT = {"status", "diff", "log", "show"}
 
 _SENSITIVE = ("KEY", "TOKEN", "SECRET", "PASSWORD", "PAT_")
 
@@ -136,8 +136,13 @@ def run_cmd(args, ctx):
         return {"ok": False, "error": f"cannot parse: {e}"}
     if not parts or parts[0] not in ALLOWED_COMMANDS:
         return {"ok": False, "error": f"not allowlisted: {parts[0] if parts else ''!r}"}
-    if parts[0] == "git" and (len(parts) < 2 or parts[1] not in ALLOWED_GIT):
-        return {"ok": False, "error": f"git subcommand not allowlisted: {parts[1:2]}"}
+    if parts[0] == "git":
+        if len(parts) < 2 or parts[1] not in ALLOWED_GIT:
+            return {"ok": False, "error": f"git subcommand not allowlisted: {parts[1:2]}"}
+        if len(parts) > 2:
+            return {"ok": False, "error": "git commands accept only the read-only subcommand"}
+    elif len(parts) > 1:
+        return {"ok": False, "error": "command arguments are disabled for the read-only shell tool"}
     try:
         proc = subprocess.run(parts, cwd=_root(ctx), capture_output=True,
                               text=True, timeout=min(CMD_TIMEOUT_S, 120))
