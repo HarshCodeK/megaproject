@@ -1,0 +1,61 @@
+{
+  "repo": "megaproject",
+  "tier": "S",
+  "domain": "sandboxed tool-calling agent / offline degradation",
+  "gate": {
+    "tests_passed": 38,
+    "tests_failed": 0,
+    "pytest_exit": 0,
+    "ci": "green",
+    "docker": "built and health-checked in CI",
+    "note": "Agent loop verified live with openai/gpt-oss-120b (readonly, tool trace intact). Registry moved to production ids; empty-path tool args normalize gracefully."
+  },
+  "headline": [
+    {
+      "label": "tests passing",
+      "value": "38",
+      "command": "python -m pytest tests/ -q",
+      "tone": "accent"
+    },
+    {
+      "label": "sandboxed tools",
+      "value": "7",
+      "command": "grep TOOLS src/tools.py",
+      "tone": "info"
+    },
+    {
+      "label": "CI",
+      "value": "green",
+      "command": "gh run list",
+      "tone": ""
+    }
+  ],
+  "rows": [
+    {
+      "metric": "tests passing",
+      "value": 38,
+      "command": "python -m pytest tests/ -q"
+    },
+    {
+      "metric": "sandboxed tools",
+      "value": 7,
+      "command": "grep TOOLS src/tools.py"
+    },
+    {
+      "metric": "degradation modes",
+      "value": 4,
+      "command": "grep -o 'agent_[a-z_]*' src/agent.py | sort -u"
+    },
+    {
+      "metric": "escape vectors tested",
+      "value": 5,
+      "command": "grep -c 'raises(workspace.SandboxError)' tests/test_sandbox.py"
+    },
+    {
+      "metric": "chromadb + local embeddings",
+      "value": "yes",
+      "command": "grep chromadb src/rag.py"
+    }
+  ],
+  "source": "measured 2026-10-03"
+}
