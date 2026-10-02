@@ -99,7 +99,7 @@ root.
 | File | What it does |
 |---|---|
 | `src/workspace.py` | The sandbox. `safe_join` is the whole trust boundary |
-| `src/tools.py` | Seven tools, allowlisted commands, secret redaction |
+| `src/tools.py` | Seven tools, fixed read-only command allowlist, secret redaction |
 | `src/agent.py` | The loop, the round cap, the three degradation modes |
 | `src/llm.py` | Provider call + circuit breaker that records *why* |
 | `src/rag.py` | ChromaDB + local embeddings |
@@ -130,7 +130,7 @@ interviewer will actually ask, with answers grounded in this code.
 
 ## Known limits
 
-- **Path sandbox, not process isolation.** Stated above, deliberately.
+- **Path sandbox, not process isolation.** The workspace path checks constrain the file tools; the fixed command surface removes the previous interpreter-launch escape route, but this is still not an OS-level sandbox.
 - **TOCTOU**: `safe_join` resolves, then `open()` uses. A symlink swapped in
   between would bypass it. Production answers are `openat` with `O_NOFOLLOW`,
   or a container.
