@@ -224,7 +224,7 @@ SPECS = [
             "required": ["pattern"]}}},
     {"type": "function", "function": {
         "name": "run_cmd",
-        "description": "Run an allowlisted read-only command (python, pytest, git status/diff/log/show/branch, ls). Output is redacted.",
+        "description": "Run one fixed read-only command: git status, git diff, git log, git show, ls, or dir. Arguments are not accepted. Output is redacted.",
         "parameters": {"type": "object", "properties": {"command": {"type": "string"}},
                        "required": ["command"]}}},
     {"type": "function", "function": {
