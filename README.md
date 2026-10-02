@@ -138,3 +138,7 @@ interviewer will actually ask, with answers grounded in this code.
   corpus is unmeasured.
 - **No write audit trail.** Writes are gated, but nothing records who asked for
   what. A production version would log every mutation.
+
+## License
+
+MIT.
