@@ -52,9 +52,7 @@ spawned by `run_cmd` from doing so — that needs a container, which is what a
 production deployment would use. Saying this before you are asked is the
 difference between a security control and a security claim.
 
-Command execution is an allowlist, never a denylist: `python`, `python3`,
-`pytest`, `git status|diff|log|show|branch`, `ls`, `dir`. Anything else does not
-run. `git push` is refused — a read-only agent should not be able to push.
+Command execution is an allowlist of fixed read-only invocations: `git status`, `git diff`, `git log`, `git show`, `ls`, and `dir`. Command arguments are disabled, so the shell tool cannot be turned into a general-purpose process launcher. Python execution, pytest execution, branch mutation, and `git push` are refused.
 
 Env values whose names look like credentials are redacted from all tool output,
 so a child process echoing the environment cannot leak a key into the trace.
