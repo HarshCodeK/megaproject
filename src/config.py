@@ -10,8 +10,16 @@ CHROMA_PATH = os.environ.get("MP_CHROMA", os.path.join(ROOT, "chroma_db"))
 DOCS_DIR = os.environ.get("MP_DOCS", os.path.join(ROOT, "knowledge_docs"))
 
 # LLM (online tier)
+#
+# Why this changed: the default was `llama-3.3-70b-versatile`, which Groq
+# retired on 2026-07-17. Every agent and operator call returned HTTP 404, so
+# the system could only ever run in its offline RAG-only mode — which looks
+# like the degradation path working, when it is actually the online tier dead.
+#
+# `qwen/qwen3.8-27b` is live on the free/developer tier and supports tool use,
+# JSON mode and vision. Verified against the account's model list on 2026-10-02.
 LLM_PROVIDER = "groq"
-LLM_MODEL = os.environ.get("MP_LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_MODEL = os.environ.get("MP_LLM_MODEL", "qwen/qwen3.8-27b")
 LLM_TIMEOUT_S = 20
 
 # Embeddings (offline-capable: local sentence-transformer)
