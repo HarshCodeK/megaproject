@@ -1,0 +1,64 @@
+name: ci
+
+# test  — does the code work?  (pytest, fully offline: the circuit-breaker and
+#         sandbox tests must not need an API key)
+# build — does the image work? (a real docker build, then a real /health call)
+#
+# The build job matters here more than usual: this project makes claims about
+# offline degradation and a workspace sandbox, and both are claims about an
+# image that has actually been built and started.
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      # No GROQ_API_KEY on purpose. Every test must pass with the LLM offline —
+      # that is the path this project claims degrades gracefully.
+      - name: Tests (offline)
+        run: python -m pytest tests/ -q
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: megaproject:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start it and check /health
+        run: |
+          docker run -d --name mp -p 8000:8000 megaproject:test
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              echo; echo "healthy"; exit 0
+            fi
+            sleep 6
+          done
+          echo "did not become healthy"; docker logs mp; exit 1
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs mp || true
