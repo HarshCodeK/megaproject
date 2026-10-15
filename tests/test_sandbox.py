@@ -53,3 +53,19 @@ def test_invalid_read_limits_are_rejected(tmp_path, limit):
     (tmp_path / "safe.txt").write_text("safe")
     with pytest.raises(SandboxError, match="read limit"):
         Workspace(tmp_path).read("safe.txt", max_bytes=limit)
+
+
+def test_listing_stops_after_limit_plus_one_entries(tmp_path, monkeypatch):
+    workspace = Workspace(tmp_path)
+    original_iterdir = type(tmp_path).iterdir
+
+    def guarded_iterdir(path):
+        if path == tmp_path:
+            for index in range(workspace.MAX_LIST_ENTRIES + 1):
+                yield tmp_path / f"entry-{index}"
+            raise AssertionError("listing continued past the first over-limit entry")
+        yield from original_iterdir(path)
+
+    monkeypatch.setattr(type(tmp_path), "iterdir", guarded_iterdir)
+    with pytest.raises(SandboxError, match="too many entries"):
+        workspace.list(".")
