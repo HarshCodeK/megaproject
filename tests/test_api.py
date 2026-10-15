@@ -37,3 +37,13 @@ def test_metrics_count_route_errors():
     response = client.get("/metrics")
     assert response.status_code == 200
     assert response.json()["routes"]["POST /run"]["errors_since_start"] >= 1
+
+
+def test_unmatched_paths_do_not_create_unbounded_metric_labels():
+    client = TestClient(app)
+    client.get("/unmatched-a")
+    client.get("/unmatched-b")
+    routes = client.get("/metrics").json()["routes"]
+    assert "GET <unmatched>" in routes
+    assert "GET /unmatched-a" not in routes
+    assert "GET /unmatched-b" not in routes
