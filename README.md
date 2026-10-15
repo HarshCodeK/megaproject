@@ -1,65 +1,78 @@
-# MegaProject — Sandboxed Tool-Agent Prototype
+# MegaProject — bounded read-only tool agent
 
-A small tool-calling boundary where the requested tool and arguments are treated as untrusted input and filesystem access is constrained to a resolved workspace.
+MegaProject is a small Python/FastAPI tool-execution boundary for demonstrating the security and reliability decisions around file tools. It accepts a short sequence of explicit tool calls and restricts reads/listing to a dedicated workspace.
 
-**Stack:** Python, FastAPI, Pydantic, pytest.
+Important: the current implementation does **not** call an LLM or autonomously plan. The request supplies the tool steps. This isolates the deterministic tool boundary so it can be tested without model cost or nondeterminism. It is an application-level path sandbox, not OS-level isolation.
 
-## Problem and design goal
+## What it demonstrates
 
-An agent that can read files needs a narrow tool boundary. This project demonstrates an allowlisted set of filesystem operations, resolved-path validation, bounded reads, and a maximum number of tool rounds. The key design principle is that prompt instructions are not a security boundary: filesystem access must be constrained by code.
-
-## Architecture
-
-`POST /run → request validation → bounded step loop → tool allowlist/dispatch → Workspace path validation → result trace`
-
-- `Workspace.path()` rejects absolute paths, parent traversal, home expansion, and resolved paths outside the workspace.
-- `Workspace.read()` caps file reads at 100,000 bytes by default and decodes invalid UTF-8 with replacement characters.
-- `Workspace.list()` lists names inside a validated directory.
-- `Agent.run()` executes at most four submitted steps by default.
-- The FastAPI layer exposes `GET /health` and `POST /run`.
-
-The HTTP request supplies the steps directly; this repository does **not** currently call an LLM to plan tools. It is a tool-execution boundary prototype rather than a complete autonomous agent.
+- Tool allowlisting: only `list` and `read` are accepted.
+- Workspace-root confinement after path resolution, including symlink escapes.
+- Hidden paths rejected to reduce accidental secret exposure.
+- At most four steps per request.
+- Read cap of 100 KB, path cap of 240 characters, and directory listing cap of 200 visible entries.
+- Consistent client errors for rejected paths rather than unhandled server exceptions.
+- Small browser UI, OpenAPI docs and process-local request metrics.
+- A bounded load-test harness for latency, throughput, HTTP status codes and errors.
 
 ## Quickstart
 
-```bash
+Requires Python 3.11+.
+
+~~~bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
-uvicorn megaproject.app:app --host 0.0.0.0 --port 8000
-```
+uvicorn megaproject.app:app --reload
+~~~
 
-Open `http://localhost:8000/docs` for the request schema. Run tests with:
+Open the root page for the UI, /docs for OpenAPI, /health for liveness, /ready for workspace readiness, and /metrics for per-process observations.
 
-```bash
+## API example
+
+~~~bash
+curl -s http://127.0.0.1:8000/run \
+  -H 'Content-Type: application/json' \
+  -d '{"steps":[{"tool":"read","args":{"path":"demo.txt"}}]}'
+~~~
+
+A rejected workspace path returns HTTP 400. Invalid tools, unknown fields and more than four steps are rejected by request validation. No file-write or shell tool is exposed.
+
+## Workspace boundary
+
+The default root is the repository's dedicated workspace/ directory. Set WORKSPACE_ROOT to a dedicated directory when deploying. Do not place credentials, private data, Git metadata or environment files inside it. Hidden files are not listed or readable. Reads stream only up to the configured byte limit before failing; the entire file is not loaded before checking its size.
+
+This is not a real OS sandbox. It does not protect against a vulnerability in the Python process or its dependencies. If executing hostile third-party workloads is ever added, use container/VM isolation, non-root permissions, network policy, CPU/memory limits and an external audit boundary. Do not add shell execution casually.
+
+## Tests
+
+~~~bash
 pytest -q
-```
+python -m compileall -q src scripts
+~~~
 
-## Security boundary: what is and is not guaranteed
+The tests cover path traversal, symlink escapes, hidden files, oversized reads, oversized listings, API input validation and metrics accounting.
 
-Path resolution blocks common traversal and symlink escapes from the configured workspace. This is a **path sandbox only**, not OS-level isolation. The application currently constructs `Workspace(".")`, so the effective workspace depends on the process working directory. The service has no authentication or authorization, no request-size policy beyond framework defaults, no audit log, and no OS/container boundary. The tool interface must not be exposed publicly with access to sensitive files.
+## Reproducible reliability testing
 
-The `/run` endpoint accepts arbitrary step lists but the agent truncates execution to four steps; unknown tools depend on dispatch behavior. The workspace root should be explicitly configured rather than implicitly tied to the launch directory before deployment. Hostile workloads require a separate OS user and container/VM restrictions, read-only mounts where possible, resource limits, and network restrictions.
+See docs/RELIABILITY_LAB.md. Start small and increase concurrency in controlled steps:
 
-## Capacity and load testing
+~~~bash
+python scripts/load_test.py --base-url http://127.0.0.1:8000 --requests 100 --concurrency 10 --output artifacts/load-10.json
+python scripts/load_test.py --base-url http://127.0.0.1:8000 --requests 500 --concurrency 25 --output artifacts/load-25.json
+curl http://127.0.0.1:8000/metrics
+~~~
 
-No measured concurrency, throughput, or availability claim is made. A reproducible test should identify the exact commit, runtime, host/plan, process worker count, request size, number of steps, file sizes, test duration, and concurrency level. Measure throughput, p50/p95/p99 latency, HTTP errors, CPU/RAM, and the latency distribution by tool type. Include successful reads, missing files, invalid paths, oversized files, and malformed requests.
+Reports include client-observed throughput, p50/p95/p99/max latency, error rate, HTTP status distribution, transport errors and response bytes. They do not assert real users or server capacity. Record the exact commit, host plan, region, cold/warm state and request mix, and retain failed and retest reports together.
 
-Test security invariants under concurrency as well as happy-path performance. Do not benchmark against real secrets or sensitive files. Simulated clients are load-test traffic, not real users. A passing load test cannot establish that a path sandbox is secure against arbitrary hostile workloads.
+## Deployment
+
+The root render.yaml declares a free Render API deployment and confines its workspace to a dedicated directory. Free instances sleep after inactivity, have ephemeral storage and cannot scale to multiple instances. This is a public demo configuration, not production uptime or scale.
 
 ## Known limitations
 
-- Tool steps are supplied by the client; there is no LLM planning loop.
-- Workspace root is currently the process working directory.
-- Path validation is not OS-level isolation.
-- No authentication, rate limiting, durable audit trail, or resource quotas are implemented.
-- Only a small filesystem tool surface is intended.
-- No production security, availability, or maximum-concurrency guarantee is claimed.
-
-## Interview discussion
-
-A strong next step is to add adversarial tests for traversal and symlink behavior, define a fixed workspace root, introduce explicit tool schemas and request limits, and measure the system before adding more tools. Keep authorization and OS-level isolation separate from the model's instructions.
+There is no LLM-based planning, authentication, file-write support, tenant-specific workspace separation, rate limiting, OS-level sandbox, persistent job queue or cross-instance metrics. The endpoint is read-only, but a public instance can still use CPU and connections; limit exposure and load-test only your own deployment.
 
 ## License
 
-MIT.
+MIT. See LICENSE.
