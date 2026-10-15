@@ -31,7 +31,7 @@ class Workspace:
         return resolved
 
     def read(self, relative, max_bytes=MAX_READ_BYTES):
-        if max_bytes < 1 or max_bytes > self.MAX_READ_BYTES:
+        if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or not 1 <= max_bytes <= self.MAX_READ_BYTES:
             raise SandboxError("read limit is outside the permitted range")
         path = self.path(relative)
         if not path.is_file():
