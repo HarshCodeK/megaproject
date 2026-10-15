@@ -1,10 +1,10 @@
 # MegaProject — sandboxed tool agent
 
-Small tool-calling boundary where the model is untrusted input and file access is constrained to a resolved workspace.
+Small read-only tool executor where every requested path is treated as untrusted input and constrained to a dedicated workspace.
 
-`Workspace.path()` rejects absolute paths, parent traversal, home expansion, and resolved paths outside the workspace. Only `list` and bounded `read` tools are exposed.
+The default workspace is `workspace/`, not the repository root. Absolute paths, parent traversal, home expansion, hidden paths, NUL bytes and resolved symlink escapes are rejected. File reads and directory listings are bounded; runs accept at most four steps.
 
-This is a **path sandbox**, not OS-level isolation. Hostile workloads need container/VM and OS restrictions.
+This is application-level path confinement, not OS-level isolation. See `docs/RELIABILITY_AND_SECURITY.md` for limits and deployment requirements.
 
 ## Test
 `pip install -e . && pytest -q`
