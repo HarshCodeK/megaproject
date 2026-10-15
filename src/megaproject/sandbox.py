@@ -50,9 +50,13 @@ class Workspace:
         if not path.is_dir():
             raise SandboxError("path is not a directory")
         try:
-            entries = sorted(item.name for item in path.iterdir() if not item.name.startswith("."))
+            visible = []
+            for item in path.iterdir():
+                if item.name.startswith("."):
+                    continue
+                visible.append(item.name)
+                if len(visible) > self.MAX_LIST_ENTRIES:
+                    raise SandboxError("directory has too many entries to list safely")
         except OSError as exc:
             raise SandboxError("directory could not be listed") from exc
-        if len(entries) > self.MAX_LIST_ENTRIES:
-            raise SandboxError("directory has too many entries to list safely")
-        return entries
+        return sorted(visible)
