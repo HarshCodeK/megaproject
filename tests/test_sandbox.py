@@ -46,3 +46,10 @@ def test_list_has_a_bounded_result(tmp_path):
 def test_nul_in_path_is_rejected_before_path_operations(tmp_path):
     with pytest.raises(SandboxError, match="NUL"):
         Workspace(tmp_path).path("\x00")
+
+
+@pytest.mark.parametrize("limit", [0, -1, 100_001, True, 1.5])
+def test_invalid_read_limits_are_rejected(tmp_path, limit):
+    (tmp_path / "safe.txt").write_text("safe")
+    with pytest.raises(SandboxError, match="read limit"):
+        Workspace(tmp_path).read("safe.txt", max_bytes=limit)
