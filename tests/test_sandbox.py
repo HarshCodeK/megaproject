@@ -41,3 +41,8 @@ def test_list_has_a_bounded_result(tmp_path):
         (tmp_path / f"f{index:03}.txt").touch()
     with pytest.raises(SandboxError, match="too many entries"):
         Workspace(tmp_path).list()
+
+
+def test_nul_in_path_is_rejected_before_path_operations(tmp_path):
+    with pytest.raises(SandboxError, match="NUL"):
+        Workspace(tmp_path).path("\x00")

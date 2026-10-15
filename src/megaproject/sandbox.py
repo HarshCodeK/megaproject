@@ -15,8 +15,8 @@ class Workspace:
         self.root.mkdir(parents=True, exist_ok=True)
 
     def path(self, relative):
-        if not isinstance(relative, str) or not relative or len(relative) > self.MAX_PATH_CHARS:
-            raise SandboxError("path is empty or exceeds the path-length limit")
+        if not isinstance(relative, str) or not relative or len(relative) > self.MAX_PATH_CHARS or "\\x00" in relative:
+            raise SandboxError("path is empty, contains NUL, or exceeds the path-length limit")
         candidate = Path(relative)
         if candidate.is_absolute() or ".." in candidate.parts or relative.startswith("~"):
             raise SandboxError("unsafe path")
