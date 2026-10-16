@@ -51,9 +51,9 @@ async def collect_request_metrics(request, call_next):
         status_code = response.status_code
         return response
     finally:
-        _route = request.scope.get("route")
-            route_name = getattr(route, "path", "<unmatched>")
-            metrics.finish(f"{request.method} {route_name}", status_code, started)
+        route = request.scope.get("route")
+        route_name = getattr(route, "path", "<unmatched>")
+        _metrics.finish(f"{request.method} {route_name}", status_code, started)
 
 
 @app.exception_handler(SandboxError)
