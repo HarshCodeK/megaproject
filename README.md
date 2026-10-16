@@ -71,7 +71,7 @@ The root render.yaml declares a free Render API deployment and confines its work
 
 ## Known limitations
 
-There is no LLM-based planning, authentication, file-write support, tenant-specific workspace separation, rate limiting, OS-level sandbox, persistent job queue or cross-instance metrics. The endpoint is read-only, but a public instance can still use CPU and connections; limit exposure and load-test only your own deployment.
+There is no LLM-based planning, authentication, file-write support, tenant-specific workspace separation, OS-level sandbox, persistent job queue or cross-instance metrics. The `/run` endpoint has a shared process-local request ceiling of 120/minute by default (`API_REQUESTS_PER_MINUTE`), but this is not per-user or distributed abuse protection. The endpoint is read-only, but a public instance can still use CPU and connections; limit exposure and load-test only your own deployment.
 
 ## License
 
