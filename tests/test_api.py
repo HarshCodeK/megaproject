@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import megaproject.app as app_module
 from megaproject.app import app
 
 client = TestClient(app)
@@ -47,3 +48,16 @@ def test_unmatched_paths_do_not_create_unbounded_metric_labels():
     assert "GET <unmatched>" in routes
     assert "GET /unmatched-a" not in routes
     assert "GET /unmatched-b" not in routes
+
+
+def test_public_run_endpoint_has_a_shared_request_limit(monkeypatch):
+    monkeypatch.setenv("API_REQUESTS_PER_MINUTE", "1")
+    with app_module._request_hits_lock:
+        app_module._request_hits.clear()
+    client = TestClient(app)
+
+    payload = {"steps": [{"tool": "read", "args": {"path": "demo.txt"}}]}
+    assert client.post("/run", json=payload).status_code == 200
+    assert client.post("/run", json=payload).status_code == 429
+    statuses = client.get("/metrics").json()["routes"]["POST /run"]["status_codes_since_start"]
+    assert statuses.get("429", 0) >= 1
