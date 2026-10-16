@@ -1,5 +1,8 @@
+from collections import deque
 import os
 from pathlib import Path
+from threading import Lock
+from time import monotonic
 from typing import Literal
 
 from fastapi import FastAPI, Response
@@ -16,6 +19,23 @@ workspace = Workspace(WORKSPACE_ROOT)
 app = FastAPI(title="Sandboxed Tool Agent", version="0.2.0")
 _metrics = ProcessMetrics()
 _METRICS_EXCLUDED = {"/", "/health", "/ready", "/metrics"}
+_request_hits: deque[float] = deque()
+_request_hits_lock = Lock()
+
+
+def _request_allowed() -> bool:
+    try:
+        limit = max(1, int(os.getenv("API_REQUESTS_PER_MINUTE", "120")))
+    except ValueError:
+        limit = 120
+    now = monotonic()
+    with _request_hits_lock:
+        while _request_hits and now - _request_hits[0] >= 60:
+            _request_hits.popleft()
+        if len(_request_hits) >= limit:
+            return False
+        _request_hits.append(now)
+        return True
 
 
 class Step(BaseModel):
@@ -47,12 +67,18 @@ async def collect_request_metrics(request, call_next):
     started = _metrics.start()
     status_code = 500
     try:
+        if request.url.path == "/run" and not _request_allowed():
+            status_code = 429
+            return JSONResponse(status_code=429, content={"detail": "the demo's shared request limit was reached; retry later"})
         response = await call_next(request)
         status_code = response.status_code
         return response
     finally:
         route = request.scope.get("route")
         route_name = getattr(route, "path", "<unmatched>")
+        # Early middleware responses happen before routing populates scope["route"].
+        if route is None and request.url.path == "/run":
+            route_name = "/run"
         _metrics.finish(f"{request.method} {route_name}", status_code, started)
 
 
