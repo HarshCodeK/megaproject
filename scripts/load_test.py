@@ -11,8 +11,22 @@ import platform
 import sys
 from time import perf_counter
 import httpx
+from urllib.parse import urlsplit, urlunsplit
 
 DEFAULT_PAYLOAD = {"steps": [{"tool": "read", "args": {"path": "demo.txt"}}]}
+
+def safe_url(url: str) -> str:
+    """Return a report-safe URL without credentials, query parameters or fragments."""
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname or ""
+        if ":" in hostname and not hostname.startswith("["):
+            hostname = f"[{hostname}]"
+        netloc = hostname + (f":{parts.port}" if parts.port else "")
+        return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+    except ValueError:
+        return "<invalid URL>"
+
 
 
 def percentile(values: list[float], p: float) -> float | None:
@@ -76,7 +90,7 @@ async def run(args: argparse.Namespace) -> dict:
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(), "client_python": platform.python_version(),
         "scope": "client-side HTTP behavior; no claim about server CPU or memory",
-        "base_url": args.base_url.rstrip("/"), "method": args.method, "path": args.path,
+        "base_url": safe_url(args.base_url.rstrip("/")), "method": args.method, "path": args.path,
         "requested_requests": args.requests, "configured_concurrency": args.concurrency,
         "duration_seconds": round(duration, 3), "throughput_requests_per_second": round(success / duration, 2),
         "attempted_requests_per_second": round(args.requests / duration, 2),
