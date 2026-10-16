@@ -34,3 +34,7 @@ def test_report_distinguishes_successful_and_attempted_throughput(monkeypatch):
     assert report["success_count"] == 4
     assert report["error_count"] == 0
     assert report["throughput_requests_per_second"] == report["attempted_requests_per_second"]
+
+
+def test_report_url_redacts_credentials_query_and_fragment():
+    assert load_test.safe_url("https://user:secret@example.test/service?token=secret#fragment") == "https://example.test/service"
