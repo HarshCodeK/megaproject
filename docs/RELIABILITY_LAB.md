@@ -17,7 +17,7 @@ python scripts/load_test.py --base-url http://127.0.0.1:8000 --requests 500 --co
 curl http://127.0.0.1:8000/metrics
 ~~~
 
-The harness records p50/p95/p99/max latency, throughput, status codes, transport errors and response bytes. It uses a bounded worker pool, caps a run at 100,000 requests and 10,000 configured in-flight requests, and treats only 2xx responses as successful. These are client-side safety bounds, not target-capacity claims. It never reports a user count or estimates server CPU/memory.
+The harness records p50/p95/p99/max latency, throughput, status codes, transport errors and response bytes. The generator redacts URL credentials, query strings and fragments from saved reports; pass secrets with `--header`, not in the URL. It uses a bounded worker pool, caps a run at 100,000 requests and 10,000 configured in-flight requests, and treats only 2xx responses as successful. These are client-side safety bounds, not target-capacity claims. It never reports a user count or estimates server CPU/memory.
 
 ## How to investigate a failure
 
