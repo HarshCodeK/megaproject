@@ -35,4 +35,6 @@ This is an application-level path boundary, not OS-level isolation. It has no wr
 
 ## Capacity honesty
 
+The `/run` endpoint has a shared process-local request ceiling of 120/minute by default (`API_REQUESTS_PER_MINUTE`). This is a basic demo guard, not authentication or distributed/per-user rate limiting.
+
 A concurrency setting is in-flight requests from the load generator, not human users or sessions. Do not claim a service supports 10,000 concurrent users from a 10,000-request test. Test a ramp, publish the configuration and measured outcome, and identify the first failure point. Free Render services sleep after inactivity, use ephemeral storage, and cannot scale to multiple instances; the blueprint is for a demo, not an uptime promise.
