@@ -1,0 +1,3 @@
+This is a public demo document in the read-only workspace.
+
+The API exposes bounded list and read tools only. It rejects hidden paths and paths that escape the workspace. It does not invoke an LLM, execute shell commands, modify files, or provide OS-level isolation.
